@@ -1,7 +1,7 @@
 twget
 ====
 
-Twitter からツイートなどのデータを収集するコンソールアプリケーションです。  
+Twitter からツイートなどのデータを収集する C# のコンソールアプリケーションです。  
 ライブラリは [CoreTweet](https://github.com/CoreTweet) を使用しています。  
 
 **目的**  
