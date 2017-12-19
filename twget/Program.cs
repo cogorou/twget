@@ -1070,7 +1070,7 @@ namespace twget
 							foreach (var text in texts)
 							{
 								var line = text.ReplaceTag(item.Entities);
-								stream.WriteLine("{0}", line);
+								stream.WriteLine("{0}<br/>", line);
 							}
 							stream.WriteLine("</td>");
 							stream.WriteLine("</tr>");
@@ -1141,7 +1141,7 @@ namespace twget
 					foreach (var text in texts)
 					{
 						var line = text.ReplaceTag(item.Entities);
-						stream.WriteLine("{0}", line);
+						stream.WriteLine("{0}<br/>", line);
 					}
 					stream.WriteLine("</td>");
 					stream.WriteLine("</tr>");
@@ -1209,7 +1209,7 @@ namespace twget
 					foreach (var text in texts)
 					{
 						var line = text.ReplaceTag(item.Entities);
-						stream.WriteLine("{0}", line);
+						stream.WriteLine("{0}<br/>", line);
 					}
 					stream.WriteLine("</td>");
 					stream.WriteLine("</tr>");
@@ -1277,7 +1277,7 @@ namespace twget
 					foreach (var text in texts)
 					{
 						var line = text.ReplaceTag(item.Entities);
-						stream.WriteLine("{0}", line);
+						stream.WriteLine("{0}<br/>", line);
 					}
 					stream.WriteLine("</td>");
 					stream.WriteLine("</tr>");
