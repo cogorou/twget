@@ -1195,11 +1195,55 @@ namespace twget
 				stream.WriteLine("screen_name:{0}  ", name);
 				stream.WriteLine("");
 
-				stream.WriteLine("# Result");
-				stream.WriteLine("");
+				bool header_printed = false;
 
 				foreach (var item in tokens.Statuses.UserTimeline(screen_name: name, count: num))
 				{
+					if (header_printed == false)
+					{
+						header_printed = true;
+
+						stream.WriteLine("## {0}  ", string.Format("<a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a>", item.User.Name, item.User.ScreenName));
+						stream.WriteLine("");
+						if (string.IsNullOrWhiteSpace(item.User.ProfileBannerUrl) == false)
+						{
+							stream.WriteLine("<img src=\"{0}\">", item.User.ProfileBannerUrl);
+							stream.WriteLine("");
+						}
+						stream.WriteLine("<table>");
+						{
+							stream.WriteLine("<tr>");
+							stream.WriteLine("<td width=48>");
+							if (string.IsNullOrWhiteSpace(item.User.ProfileImageUrl) == false)
+							{
+								stream.WriteLine("<a href=\"https://twitter.com/{1}\" target=_blank><img src=\"{0}\"></a>", item.User.ProfileImageUrl, item.User.ScreenName);
+							}
+							stream.WriteLine("</td>");
+						}
+						{
+							stream.WriteLine("<td>");
+							stream.WriteLine("{0}", item.User.Description);
+							stream.WriteLine("</td>");
+							stream.WriteLine("</tr>");
+						}
+						stream.WriteLine("</table>");
+						stream.WriteLine("");
+						stream.WriteLine("Id: {0}  ", item.User.Id);
+						stream.WriteLine("Date: {0}  ", item.User.CreatedAt.LocalDateTime);
+						stream.WriteLine("Url: {0}  ", item.User.Url);
+						stream.WriteLine("Email: {0}  ", item.User.Email);
+						stream.WriteLine("Statuses: {0}  ", item.User.StatusesCount);
+						stream.WriteLine("Friends: {0}  ", item.User.FriendsCount);
+						stream.WriteLine("Followers: {0}  ", item.User.FollowersCount);
+						stream.WriteLine("Favourites: {0}  ", item.User.FavouritesCount);
+						stream.WriteLine("Banner: {0}  ", item.User.ProfileBannerUrl);
+						stream.WriteLine("Image: {0}  ", item.User.ProfileImageUrl);
+						stream.WriteLine("");
+
+						stream.WriteLine("# Result");
+						stream.WriteLine("");
+					}
+
 					stream.WriteLine("## {0}: {1} @{2}", item.CreatedAt.LocalDateTime, item.User.Name, item.User.ScreenName);
 					stream.WriteLine("");
 					stream.WriteLine("<table>");
