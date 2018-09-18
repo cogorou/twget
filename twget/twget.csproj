@@ -35,8 +35,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoreTweet, Version=0.8.1.394, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\CoreTweet.0.8.1.394\lib\net45\CoreTweet.dll</HintPath>
+    <Reference Include="CoreTweet, Version=0.9.0.415, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\packages\CoreTweet.0.9.0.415\lib\net45\CoreTweet.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
