@@ -43,10 +43,10 @@ exit /b
 
 set COMMAND=%1
 set PLATFORM=%2
-set SOLUTION=%3
+set CONFIGURATION=%3
 
 echo %PROJECT% - %COMMAND% %PLATFORM% %SOLUTION%
-%MSBUILD_EXE% %PROJECT% /t:%COMMAND% /p:Platform=%PLATFORM% /p:Configuration=%SOLUTION% > %PREFIX%.log 2>&1
+%MSBUILD_EXE% %PROJECT% /t:%COMMAND% /p:Platform=%PLATFORM% /p:Configuration=%CONFIGURATION% > %PREFIX%.log 2>&1
 if ERRORLEVEL 1 (
 	echo error occured.
 	pause

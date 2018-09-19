@@ -5,8 +5,8 @@ Twitter からツイートなどのデータを収集する C# のコンソー�
 ライブラリは [CoreTweet](https://github.com/CoreTweet) を使用しています。  
 
 **目的**  
-このプロジェクトは CoreTweet を使用した処理の (非公式な) サンプルを目的にしています。
-逐次実行型ですので処理内容は簡素です。
+このプロジェクトは CoreTweet を使用した処理のサンプル (非公式) を目的にしています。  
+逐次実行型ですので処理内容は簡素です。  
 
 
 # 構築から実行まで
@@ -50,9 +50,13 @@ ConsumerKey 及び ConsumerSecret の value に設定する値を編集してく
 	</configuration>
 
 ※参考：  
-ConsumerKey/ConsumerSecret は、[Twitter Apps](https://apps.twitter.com/) で確認できます。
+ConsumerKey/ConsumerSecret は下記で確認できます。
+
+- 従来：Twitter Apps [https://apps.twitter.com/](https://apps.twitter.com/)
+- 現在：Twitter Developers - Apps [https://developer.twitter.com/en/apps](https://developer.twitter.com/en/apps)
+
 これらは Twitter App 毎に割り振られた Key です。
-まだ、Twitter App を作成していない場合は、当サイトの [Create New App] ボタンを押下して作成してください。
+まだ、Twitter App を作成していない場合は、当サイトの [Create an App] ボタンを押下して作成してください。
 尚、Twitter App を作成するには「Twitter のモバイル認証」が必要です。
 
 
@@ -98,7 +102,7 @@ PIN コードが表示されます。
 |ディレクトリ|(MyDocuments)\\twget-1.0|※2|  
 
 ※1) 当ファイル内に Twitter App の情報が記載されているので流出しないようご注意ください。  
-※2) (MyDocuments) は、既定では C:\\Users\\(username)\\Documents です。  
+※2) (MyDocuments) は、既定では C:\\Users\\(_username_)\\Documents です。  
 
 # 処理結果
 
@@ -130,6 +134,8 @@ PIN コードが表示されます。
 
 下記のように引数に /? を渡すと使用方法を表示します。
 
+※指定日数の上限値は standard plan を前提に記載しています。
+
 	C:> twget /?
 
 	Usage:
@@ -147,29 +153,40 @@ PIN コードが表示されます。
 	   twget.exe /friends
 
 	Today Timeline
-	   twget.exe /today:(offset_days)
+	   twget.exe /today:[offset_days]
 	   params)
-	   - offset_days = 0~
+	   - offset_days = 0~7
+	   ex)
+	   > twget.exe /today
+	   > twget.exe /today:7
 
 	Home Timeline
-	   twget.exe /home:(count)
+	   twget.exe /home:[offset_days]
 	   params)
-	   - count = 1~
+	   - offset_days = 0~7
+	     (!) There seems to be a bug. Only two days can be taken.
+	         Also, It reaches the rate limit with 10 requests.
 	   ex)
-	   > twget.exe /home:10
+	   > twget.exe /home
+	   > twget.exe /home:2
 
 	User Timeline
-	   twget.exe /user:(count) (screen_name)
+	   twget.exe /user:[offset_days] <screen_name>
 	   params)
-	   - count = 1~
+	   - offset_days = 0~7
 	   - screen_name = user screen name
 	   ex)
-	   > twget.exe /user:10 taro
+	   > twget.exe /user maruko
+	   > twget.exe /user:7 taro
 
 	Search
-	   twget.exe /search:(count) keywords...
+	   twget.exe /search:[offset_days] <keywords>
+	   params)
+	   - offset_days = 0~7
+	   - keywords = one or more search keywords
 	   ex)
-	   > twget.exe /search:100 #camera sigma OR nikon
+	   > twget.exe /search NOKTON
+	   > twget.exe /search:7 #camera sigma OR nikon
 
 ## トレンドキーワードの一覧
 
@@ -199,6 +216,11 @@ PIN コードが表示されます。
 
 	twget /today:(offset_days)
 
+- offset_days  
+	過去何日分を取得するかを指示するパラメータです。  
+	範囲は 0~7 です。  
+	省略した場合は 0 と等価です。  
+
 自身のホームタイムラインを取得して下記のように成型して保存します。  
 
 - 1 日単位（1 ファイル／１日分）に分割します。  
@@ -217,15 +239,24 @@ PIN コードが表示されます。
 
 	twget /today
 
-例）本日より 2 日前の 0:00 以降を取得します。
+例）本日より 7 日前の 0:00 以降を取得します。
 
-	twget /today:2
+	twget /today:7
 
 ## ホームタイムライン
 
-	twget /home:(count)
+	twget /home:(offset_days)
 
-自身のホームタイムラインを指定数分取得します。  
+- offset_days  
+	過去何日分を取得するかを指示するパラメータです。  
+	範囲は 0~7 です。  
+	省略した場合は 0 と等価です。  
+	
+	※注：  
+	バグと思われますが、2 日弱ほどしか取得できません。  
+	また、10 回のリクエストで Rate Limit に到達してしまいます。  
+
+自身のホームタイムラインを取得します。  
 取得したデータは下記書式のファイルに保存します。  
 
 |項目|値|備考|  
@@ -233,15 +264,24 @@ PIN コードが表示されます。
 |書式|HomeTimeline-(実行日時).md||  
 |例|HomeTimeline-20171216\_081523\_094.md||  
 
-例）最新の投稿を 10 件取得します。
+例）本日の 0:00 以降を取得します。
 
-	twget /home:10
+	twget /home
+
+例）本日より 2 日前の 0:00 以降を取得します。
+
+	twget /home:2
 
 ## ユーザータイムライン
 
-	twget /user:(count) (screen_name)
+	twget /user:(offset_days) (screen_name)
 
-指定ユーザーのタイムラインを指定の件数分取得します。  
+- offset_days  
+	過去何日分を取得するかを指示するパラメータです。  
+	範囲は 0~7 です。  
+	省略した場合は 0 と等価です。  
+
+指定ユーザーのタイムラインを取得します。  
 取得したデータは下記書式のファイルに保存します。  
 
 |項目|値|備考|  
@@ -249,17 +289,24 @@ PIN コードが表示されます。
 |書式|UserTimeline-(実行日時).md||  
 |例|UserTimeline-20171216\_081523\_094.md||  
 
-例）taro と言うユーザーの投稿を 100 件取得する例です。
+例）maruko と言うユーザーの投稿（本日の 0:00 以降）を取得します。
 
-	twget /user:100 taro
+	twget /user maruko
+
+例）taro と言うユーザーの投稿（本日より 7 日前の 0:00 以降）を取得します。
+
+	twget /user:7 taro
 
 ## 検索
 
-	twget /search:(count) keywords...
+	twget /search:(offset_days) keywords...
+
+- offset_days  
+	過去何日分を取得するかを指示するパラメータです。  
+	範囲は 0~7 です。  
+	省略した場合は 0 と等価です。  
 
 任意のキーワードを指定してツイートを検索します。  
-過去 7 日以内に制限されています。  
-
 取得したデータは下記書式のファイルに保存します。  
 
 |項目|値|備考|  
@@ -267,13 +314,17 @@ PIN コードが表示されます。
 |書式|Search-(実行日時).md||  
 |例|Search-20171216\_081523\_094.md||  
 
-例）指定キーワード (#camera nikon OR canon) に一致する投稿を検索します。
+例）指定キーワード (NOKTON) に一致する投稿（本日の 0:00 以降）を検索します。
 
-	twget /search:50 #camera nikon OR canon
+	twget /search NOKTON
+
+例）指定キーワード (#camera nikon OR canon) に一致する投稿（本日より 7 日前の 0:00 以降）を検索します。
+
+	twget /search:7 #camera nikon OR canon
 
 例）リツイートを除外する場合は下記のように exclude:retweets を指定します。
 
-	twget /search:50 昼休み 消灯 exclude:retweets
+	twget /search:7 昼休み 消灯 exclude:retweets
 
 # トラブルシューティング
 
@@ -288,6 +339,8 @@ PIN コードが表示されます。
 	Limit:180 Remaining=177 Reset=2017/11/15 13:55:44 items=100 users=15 prev_id: last_id:930601512241217537
 	Limit:180 Remaining=176 Reset=2017/11/15 13:55:44 items=200 users=16 prev_id:930601512241217537 last_id:930487512459382784
 	Limit:180 Remaining=175 Reset=2017/11/15 13:55:44 items=220 users=17 prev_id:930487512459382784 last_id:930450824261767168
+
+
 
 関連：
 - CoreTweet.Tokens.Application プロパティ  

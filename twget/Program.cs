@@ -609,7 +609,7 @@ namespace twget
 				"   twget.exe /friends",
 				"",
 				"Today Timeline",
-				"   twget.exe /today:(offset_days)",
+				"   twget.exe /today:[offset_days]",
 				"   params)",
 				"   - offset_days = 0~7",
 				"   ex)",
@@ -617,24 +617,32 @@ namespace twget
 				"   > twget.exe /today:7",
 				"",
 				"Home Timeline",
-				"   twget.exe /home:(count)",
+				"   twget.exe /home:[offset_days]",
 				"   params)",
-				"   - count = 1~",
+				"   - offset_days = 0~7",
+				"     (!) There seems to be a bug. Only two days can be taken.",
+				"         Also, It reaches the rate limit with 10 requests.",
 				"   ex)",
-				"   > twget.exe /home:10",
+				"   > twget.exe /home",
+				"   > twget.exe /home:2",
 				"",
 				"User Timeline",
-				"   twget.exe /user:(count) (screen_name)",
+				"   twget.exe /user:[offset_days] <screen_name>",
 				"   params)",
-				"   - count = 1~",
+				"   - offset_days = 0~7",
 				"   - screen_name = user screen name",
 				"   ex)",
-				"   > twget.exe /user:10 taro",
+				"   > twget.exe /user maruko",
+				"   > twget.exe /user:7 taro",
 				"",
 				"Search",
-				"   twget.exe /search:(count) keywords...",
+				"   twget.exe /search:[offset_days] <keywords>",
+				"   params)",
+				"   - offset_days = 0~7",
+				"   - keywords = one or more search keywords",
 				"   ex)",
-				"   > twget.exe /search:100 #camera sigma OR nikon",
+				"   > twget.exe /search NOKTON",
+				"   > twget.exe /search:7 #camera sigma OR nikon",
 				"",
 				"",
 			};
@@ -948,8 +956,8 @@ namespace twget
 				var offseted = now.AddDays(-offset_days);
 				origin = new DateTimeOffset(offseted.Year, offseted.Month, offseted.Day, 0, 0, 0, now.Offset);
 			}
-			Console.WriteLine("now   : {0} ({1})", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
-			Console.WriteLine("origin: {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
+			Console.WriteLine("current: {0} ({1})", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+			Console.WriteLine("origin : {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 			#endregion
 
 			#region ユーザーリストの生成:
@@ -981,17 +989,17 @@ namespace twget
 					}
 					#endregion
 
-					const int num = 200;
 					long? prev_id = null;
 					while (true)
 					{
 						// Get
-						var result = tokens.Statuses.UserTimeline(screen_name: user.Value.ScreenName, count: num, max_id: prev_id);
+						var result = tokens.Statuses.UserTimeline(screen_name: user.Value.ScreenName, count: 200, max_id: prev_id);
 						long? last_id = null;
-						int total = (result == null) ? 0 : result.Count;
+						int total = 0;
 						bool abort = false;
 						if (result != null)
 						{
+							total = result.Count;
 							foreach (var item in result)
 							{
 								if (item.CreatedAt < origin)
@@ -1014,12 +1022,9 @@ namespace twget
 								);
 
 							// count
-							int items_count = 0;
-							foreach (var pair in archives)
-								items_count += pair.Value.Count;
 							var text2 = string.Format(
 								"items={0} last_id:{1} prev_id:{2}",
-								items_count, last_id, prev_id
+								tweet_status_list.Count, last_id, prev_id
 								);
 
 							Console.WriteLine("{0} {1}", text1, text2);
@@ -1115,35 +1120,125 @@ namespace twget
 		/// ホームタイムライン
 		/// </summary>
 		/// <param name="tokens">トークン</param>
-		/// <param name="num">件数</param>
-		static void HomeTimeline(CoreTweet.Tokens tokens, int num)
+		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		static void HomeTimeline(CoreTweet.Tokens tokens, int offset_days)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
-			var suffix = MakeFileNameSuffix(DateTime.Now, true);
-			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
-			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+			var now = DateTimeOffset.Now;
+
+			#region Rate Limit Status
 			{
-				// Rate Limit Status
+				var rls = tokens.Application.RateLimitStatus().RateLimit;
+				Console.WriteLine(
+					"Limit:{0} Remaining={1} Reset={2}",
+					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+					);
+			}
+			#endregion
+
+			#region 収集開始日時の計算:
+			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
+			if (offset_days > 0)
+			{
+				var offseted = now.AddDays(-offset_days);
+				origin = new DateTimeOffset(offseted.Year, offseted.Month, offseted.Day, 0, 0, 0, now.Offset);
+			}
+			Console.WriteLine("current: {0} ({1})", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+			Console.WriteLine("origin : {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
+			#endregion
+
+			#region 収集:
+			try
+			{
+				#region Rate Limit Status
 				{
 					var rls = tokens.Application.RateLimitStatus().RateLimit;
+
 					Console.WriteLine(
 						"Limit:{0} Remaining={1} Reset={2}",
 						rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
 						);
 				}
+				#endregion
 
+				long? prev_id = null;
+				while (true)
+				{
+					// 取得:
+					var result = tokens.Statuses.HomeTimeline(count: 200, max_id: prev_id);
+
+					long? last_id = null;
+					int total = 0;
+					bool abort = false;
+					if (result != null)
+					{
+						total = result.Count;
+						foreach (var item in result)
+						{
+							if (item.CreatedAt < origin)
+							{
+								abort = true;
+								break;
+							}
+
+							tweet_status_list.Add(item);
+							last_id = item.Id;
+						}
+					}
+					// Result
+					{
+						// Rate Limit Status
+						var rls = tokens.Application.RateLimitStatus().RateLimit;
+						var text1 = string.Format(
+								"Limit:{0} Remaining={1} Reset={2}",
+								rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+							);
+
+						// count
+						var text2 = string.Format(
+							"items={0} last_id:{1} prev_id:{2}",
+							tweet_status_list.Count, last_id, prev_id
+							);
+
+						Console.WriteLine("{0} {1}", text1, text2);
+					}
+
+					if (total == 0) break;
+					if (abort == true) break;
+					if (last_id == null) break;
+					if (last_id == prev_id) break;
+
+					prev_id = last_id;
+					System.Threading.Thread.Sleep(1000);
+				}
+			}
+			catch (System.Exception ex)
+			{
+				Console.WriteLine(__FUNCTION__);
+				Console.WriteLine(ex.Message);
+				Console.WriteLine(ex.StackTrace);
+			}
+			#endregion
+
+			#region 出力:
+			var suffix = MakeFileNameSuffix(now.LocalDateTime, true);
+			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
+			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+			{
 				stream.WriteLine(__FUNCTION__);
 				stream.WriteLine("====");
 
-				if (num <= 0)
-					num = 100;
-				stream.WriteLine("count:{0}  ", num);
+				stream.WriteLine("");
+				stream.WriteLine("current: {0} ({1})  ", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+				stream.WriteLine("origin: {0} ({1}) ({2} days)  ", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 				stream.WriteLine("");
 
 				stream.WriteLine("# Result");
 				stream.WriteLine("");
 
-				foreach (var item in tokens.Statuses.HomeTimeline(count: num))
+				foreach (var item in tweet_status_list)
 				{
 					stream.WriteLine("## {0}: {1} @{2}", item.CreatedAt.LocalDateTime, item.User.Name, item.User.ScreenName);
 					stream.WriteLine("");
@@ -1171,6 +1266,7 @@ namespace twget
 					stream.WriteLine("");
 				}
 			}
+			#endregion
 		}
 
 		#endregion
@@ -1182,36 +1278,129 @@ namespace twget
 		/// </summary>
 		/// <param name="tokens">トークン</param>
 		/// <param name="name">対象ユーザーのスクリーン名</param>
-		/// <param name="num">件数</param>
-		static void UserTimeline(CoreTweet.Tokens tokens, string name, int num)
+		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		static void UserTimeline(CoreTweet.Tokens tokens, string name, int offset_days)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
-			var suffix = MakeFileNameSuffix(DateTime.Now, true);
-			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
-			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+			var now = DateTimeOffset.Now;
+
+			#region Rate Limit Status
 			{
-				// Rate Limit Status
+				var rls = tokens.Application.RateLimitStatus().RateLimit;
+				Console.WriteLine(
+					"Limit:{0} Remaining={1} Reset={2}",
+					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+					);
+			}
+			#endregion
+
+			#region 収集開始日時の計算:
+			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
+			if (offset_days > 0)
+			{
+				var offseted = now.AddDays(-offset_days);
+				origin = new DateTimeOffset(offseted.Year, offseted.Month, offseted.Day, 0, 0, 0, now.Offset);
+			}
+			Console.WriteLine("current: {0} ({1})", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+			Console.WriteLine("origin : {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
+			#endregion
+
+			#region 収集:
+			try
+			{
+				#region Rate Limit Status
 				{
 					var rls = tokens.Application.RateLimitStatus().RateLimit;
+
 					Console.WriteLine(
 						"Limit:{0} Remaining={1} Reset={2}",
 						rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
 						);
 				}
+				#endregion
 
+				long? prev_id = null;
+				while (true)
+				{
+					// 取得:
+					var result = tokens.Statuses.UserTimeline(screen_name: name, count: 200, max_id: prev_id);
+
+					long? last_id = null;
+					int total = 0;
+					bool abort = false;
+					if (result != null)
+					{
+						total = result.Count;
+						foreach (var item in result)
+						{
+							if (item.CreatedAt < origin)
+							{
+								abort = true;
+								break;
+							}
+
+							tweet_status_list.Add(item);
+							last_id = item.Id;
+						}
+					}
+					// Result
+					{
+						// Rate Limit Status
+						var rls = tokens.Application.RateLimitStatus().RateLimit;
+						var text1 = string.Format(
+								"Limit:{0} Remaining={1} Reset={2}",
+								rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+							);
+
+						// count
+						var text2 = string.Format(
+							"items={0} last_id:{1} prev_id:{2}",
+							tweet_status_list.Count, last_id, prev_id
+							);
+
+						Console.WriteLine("{0} {1}", text1, text2);
+					}
+
+					if (total == 0) break;
+					if (abort == true) break;
+					if (last_id == null) break;
+					if (last_id == prev_id) break;
+
+					prev_id = last_id;
+					System.Threading.Thread.Sleep(1000);
+				}
+			}
+			catch (System.Exception ex)
+			{
+				Console.WriteLine(__FUNCTION__);
+				Console.WriteLine(ex.Message);
+				Console.WriteLine(ex.StackTrace);
+			}
+			#endregion
+
+			#region 出力:
+			var suffix = MakeFileNameSuffix(now.LocalDateTime, true);
+			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
+			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+			{
 				stream.WriteLine(__FUNCTION__);
 				stream.WriteLine("====");
 
-				if (num <= 0)
-					num = 100;
-				stream.WriteLine("count:{0}  ", num);
+				stream.WriteLine("");
 				stream.WriteLine("screen_name:{0}  ", name);
+
+				stream.WriteLine("");
+				stream.WriteLine("current: {0} ({1})  ", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+				stream.WriteLine("origin: {0} ({1}) ({2} days)  ", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 				stream.WriteLine("");
 
 				bool header_printed = false;
 
-				foreach (var item in tokens.Statuses.UserTimeline(screen_name: name, count: num))
+				foreach (var item in tweet_status_list)
 				{
+					#region ヘッダー部:
 					if (header_printed == false)
 					{
 						header_printed = true;
@@ -1256,8 +1445,9 @@ namespace twget
 						stream.WriteLine("# Result");
 						stream.WriteLine("");
 					}
+					#endregion
 
-					stream.WriteLine("## {0}: {1} @{2}", item.CreatedAt.LocalDateTime, item.User.Name, item.User.ScreenName);
+					stream.WriteLine("## {0}:", item.CreatedAt.LocalDateTime);
 					stream.WriteLine("");
 					stream.WriteLine("<table>");
 					stream.WriteLine("<tr>");
@@ -1283,6 +1473,7 @@ namespace twget
 					stream.WriteLine("");
 				}
 			}
+			#endregion
 		}
 
 		#endregion
@@ -1294,36 +1485,128 @@ namespace twget
 		/// </summary>
 		/// <param name="tokens">トークン</param>
 		/// <param name="keyword">フィルタキーワード</param>
-		/// <param name="num">件数</param>
-		static void Search(CoreTweet.Tokens tokens, string keyword, int num)
+		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		static void Search(CoreTweet.Tokens tokens, string keyword, int offset_days)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
-			var suffix = MakeFileNameSuffix(DateTime.Now, true);
-			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
-			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+			var now = DateTimeOffset.Now;
+
+			#region Rate Limit Status
 			{
-				// Rate Limit Status
+				var rls = tokens.Application.RateLimitStatus().RateLimit;
+				Console.WriteLine(
+					"Limit:{0} Remaining={1} Reset={2}",
+					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+					);
+			}
+			#endregion
+
+			#region 収集開始日時の計算:
+			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
+			if (offset_days > 0)
+			{
+				var offseted = now.AddDays(-offset_days);
+				origin = new DateTimeOffset(offseted.Year, offseted.Month, offseted.Day, 0, 0, 0, now.Offset);
+			}
+			Console.WriteLine("current: {0} ({1})", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+			Console.WriteLine("origin : {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
+			#endregion
+
+			#region 収集:
+			try
+			{
+				#region Rate Limit Status
 				{
 					var rls = tokens.Application.RateLimitStatus().RateLimit;
+
 					Console.WriteLine(
 						"Limit:{0} Remaining={1} Reset={2}",
 						rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
 						);
 				}
+				#endregion
 
+				long? prev_id = null;
+				while (true)
+				{
+					// 取得:
+					var result = tokens.Search.Tweets(q: keyword, count: 200, max_id: prev_id);
+
+					long? last_id = null;
+					int total = 0;
+					bool abort = false;
+					if (result != null)
+					{
+						total = result.Count;
+						foreach (var item in result)
+						{
+							if (item.CreatedAt < origin)
+							{
+								abort = true;
+								break;
+							}
+
+							tweet_status_list.Add(item);
+							last_id = item.Id;
+						}
+					}
+					// Result
+					{
+						// Rate Limit Status
+						var rls = tokens.Application.RateLimitStatus().RateLimit;
+						var text1 = string.Format(
+								"Limit:{0} Remaining={1} Reset={2}",
+								rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+							);
+
+						// count
+						var text2 = string.Format(
+							"items={0} last_id:{1} prev_id:{2}",
+							tweet_status_list.Count, last_id, prev_id
+							);
+
+						Console.WriteLine("{0} {1}", text1, text2);
+					}
+
+					if (total == 0) break;
+					if (abort == true) break;
+					if (last_id == null) break;
+					if (last_id == prev_id) break;
+
+					prev_id = last_id;
+					System.Threading.Thread.Sleep(1000);
+				}
+			}
+			catch (System.Exception ex)
+			{
+				Console.WriteLine(__FUNCTION__);
+				Console.WriteLine(ex.Message);
+				Console.WriteLine(ex.StackTrace);
+			}
+			#endregion
+
+			#region 出力:
+			var suffix = MakeFileNameSuffix(DateTime.Now, true);
+			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
+			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+			{
 				stream.WriteLine(__FUNCTION__);
 				stream.WriteLine("====");
 
-				if (num <= 0)
-					num = 100;
-				stream.WriteLine("count:{0}  ", num);
+				stream.WriteLine("");
 				stream.WriteLine("keyword:{0}  ", keyword);
+
+				stream.WriteLine("");
+				stream.WriteLine("current: {0} ({1})  ", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
+				stream.WriteLine("origin: {0} ({1}) ({2} days)  ", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 				stream.WriteLine("");
 
 				stream.WriteLine("# Result");
 				stream.WriteLine("");
 
-				foreach (var item in tokens.Search.Tweets(q: keyword, count: num))
+				foreach (var item in tweet_status_list)
 				{
 					stream.WriteLine("## {0}: {1} @{2}", item.CreatedAt.LocalDateTime, item.User.Name, item.User.ScreenName);
 					stream.WriteLine("");
@@ -1351,6 +1634,7 @@ namespace twget
 					stream.WriteLine("");
 				}
 			}
+			#endregion
 		}
 
 		#endregion
