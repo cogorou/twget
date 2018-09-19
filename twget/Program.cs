@@ -4,10 +4,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 using System.Reflection;
 using System.Diagnostics;
 using System.Management;
@@ -613,8 +613,8 @@ namespace twget
 				"   params)",
 				"   - offset_days = 0~7",
 				"   ex)",
-				"   > EggsStat.exe /today",
-				"   > EggsStat.exe /today:7",
+				"   > twget.exe /today",
+				"   > twget.exe /today:7",
 				"",
 				"Home Timeline",
 				"   twget.exe /home:(count)",
@@ -949,7 +949,7 @@ namespace twget
 				origin = new DateTimeOffset(offseted.Year, offseted.Month, offseted.Day, 0, 0, 0, now.Offset);
 			}
 			Console.WriteLine("now   : {0} ({1})", now.ToString("yyyy/MM/dd HH:mm:ss"), now.Offset);
-			Console.WriteLine("origin: {0} ({1})", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset);
+			Console.WriteLine("origin: {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 			#endregion
 
 			#region ユーザーリストの生成:
