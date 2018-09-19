@@ -611,7 +611,7 @@ namespace twget
 				"Today Timeline",
 				"   twget.exe /today:[offset_days]",
 				"   params)",
-				"   - offset_days = 0~7",
+				"   - offset_days = 0~",
 				"   ex)",
 				"   > twget.exe /today",
 				"   > twget.exe /today:7",
@@ -619,8 +619,8 @@ namespace twget
 				"Home Timeline",
 				"   twget.exe /home:[offset_days]",
 				"   params)",
-				"   - offset_days = 0~7",
-				"     (!) There seems to be a bug. Only two days can be taken.",
+				"   - offset_days = 0~",
+				"     (!) There seems to be a bug. Only 2 days can be taken.",
 				"         Also, It reaches the rate limit with 10 requests.",
 				"   ex)",
 				"   > twget.exe /home",
@@ -629,7 +629,7 @@ namespace twget
 				"User Timeline",
 				"   twget.exe /user:[offset_days] <screen_name>",
 				"   params)",
-				"   - offset_days = 0~7",
+				"   - offset_days = 0~",
 				"   - screen_name = user screen name",
 				"   ex)",
 				"   > twget.exe /user maruko",
@@ -939,7 +939,7 @@ namespace twget
 		/// 本日のタイムライン
 		/// </summary>
 		/// <param name="tokens">トークン</param>
-		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		/// <param name="offset_days">本日から遡る日数 [0~]</param>
 		static void Today(CoreTweet.Tokens tokens, int offset_days)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
@@ -1120,7 +1120,7 @@ namespace twget
 		/// ホームタイムライン
 		/// </summary>
 		/// <param name="tokens">トークン</param>
-		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		/// <param name="offset_days">本日から遡る日数 [0~]</param>
 		static void HomeTimeline(CoreTweet.Tokens tokens, int offset_days)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
@@ -1278,7 +1278,7 @@ namespace twget
 		/// </summary>
 		/// <param name="tokens">トークン</param>
 		/// <param name="name">対象ユーザーのスクリーン名</param>
-		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		/// <param name="offset_days">本日から遡る日数 [0~]</param>
 		static void UserTimeline(CoreTweet.Tokens tokens, string name, int offset_days)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;

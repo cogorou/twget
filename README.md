@@ -134,8 +134,6 @@ PIN コードが表示されます。
 
 下記のように引数に /? を渡すと使用方法を表示します。
 
-※指定日数の上限値は standard plan を前提に記載しています。
-
 	C:> twget /?
 
 	Usage:
@@ -155,7 +153,7 @@ PIN コードが表示されます。
 	Today Timeline
 	   twget.exe /today:[offset_days]
 	   params)
-	   - offset_days = 0~7
+	   - offset_days = 0~
 	   ex)
 	   > twget.exe /today
 	   > twget.exe /today:7
@@ -163,8 +161,8 @@ PIN コードが表示されます。
 	Home Timeline
 	   twget.exe /home:[offset_days]
 	   params)
-	   - offset_days = 0~7
-	     (!) There seems to be a bug. Only two days can be taken.
+	   - offset_days = 0~
+	     (!) There seems to be a bug. Only 2 days can be taken.
 	         Also, It reaches the rate limit with 10 requests.
 	   ex)
 	   > twget.exe /home
@@ -173,7 +171,7 @@ PIN コードが表示されます。
 	User Timeline
 	   twget.exe /user:[offset_days] <screen_name>
 	   params)
-	   - offset_days = 0~7
+	   - offset_days = 0~
 	   - screen_name = user screen name
 	   ex)
 	   > twget.exe /user maruko
@@ -218,7 +216,7 @@ PIN コードが表示されます。
 
 - offset_days  
 	過去何日分を取得するかを指示するパラメータです。  
-	範囲は 0~7 です。  
+	範囲は 0~ です。  
 	省略した場合は 0 と等価です。  
 
 自身のホームタイムラインを取得して下記のように成型して保存します。  
@@ -249,7 +247,7 @@ PIN コードが表示されます。
 
 - offset_days  
 	過去何日分を取得するかを指示するパラメータです。  
-	範囲は 0~7 です。  
+	範囲は 0~ です。  
 	省略した場合は 0 と等価です。  
 	
 	※注：  
@@ -278,7 +276,7 @@ PIN コードが表示されます。
 
 - offset_days  
 	過去何日分を取得するかを指示するパラメータです。  
-	範囲は 0~7 です。  
+	範囲は 0~ です。  
 	省略した場合は 0 と等価です。  
 
 指定ユーザーのタイムラインを取得します。  
@@ -305,6 +303,8 @@ PIN コードが表示されます。
 	過去何日分を取得するかを指示するパラメータです。  
 	範囲は 0~7 です。  
 	省略した場合は 0 と等価です。  
+	
+	※指定日数の上限値は standard plan を前提に記載しています。  
 
 任意のキーワードを指定してツイートを検索します。  
 取得したデータは下記書式のファイルに保存します。  
