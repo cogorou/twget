@@ -336,9 +336,9 @@ PIN コードが表示されます。
 
 	C:> twget /today
 	Limit:180 Remaining=178 Reset=2017/11/15 13:55:44
-	Limit:180 Remaining=177 Reset=2017/11/15 13:55:44 items=100 users=15 prev_id: last_id:930601512241217537
-	Limit:180 Remaining=176 Reset=2017/11/15 13:55:44 items=200 users=16 prev_id:930601512241217537 last_id:930487512459382784
-	Limit:180 Remaining=175 Reset=2017/11/15 13:55:44 items=220 users=17 prev_id:930487512459382784 last_id:930450824261767168
+	Limit:180 Remaining=177 Reset=2017/11/15 13:55:44 items=100 users=15 last_id:930601512241217537 prev_id:
+	Limit:180 Remaining=176 Reset=2017/11/15 13:55:44 items=200 users=16 last_id:930487512459382784 prev_id:930601512241217537
+	Limit:180 Remaining=175 Reset=2017/11/15 13:55:44 items=220 users=17 last_id:930450824261767168 prev_id:930487512459382784
 
 
 
