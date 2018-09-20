@@ -533,7 +533,14 @@ namespace twget
 				{
 					foreach (var entity in entities.Urls)
 					{
-						result = result.Replace(entity.Url, string.Format("<a href=\"{0}\" target=_blank>{0}</a>", entity.Url));
+						if (result.Contains(entity.Url))
+						{
+							var tag = string.Format("<a href=\"{0}\" target=_blank>{0}</a>", entity.Url);
+							if (result.Contains(tag) == false)
+							{
+								result = result.Replace(entity.Url, tag);
+							}
+						}
 					}
 				}
 				if (entities.Media != null)
@@ -547,10 +554,13 @@ namespace twget
 				{
 					foreach (var entity in entities.HashTags)
 					{
-						result = result.Replace(
-							string.Format("#{0}", entity.Text),
-							string.Format("<font color=\"#0000FF\">{0}</font>", entity.Text)
-							);
+						var hash_tag = string.Format("#{0}", entity.Text);
+						var html_tag = string.Format("<font color=\"#0000FF\">{0}</font>", entity.Text);
+
+						if (result.Contains(hash_tag))
+						{
+							result = result.Replace(hash_tag, html_tag);
+						}
 					}
 				}
 				if (entities.Symbols != null)
@@ -563,18 +573,24 @@ namespace twget
 						// RT @～:
 						if (new Regex("(?<=RT @).*?(?=:)", RegexOptions.IgnoreCase).Match(result).Value == entity.ScreenName)
 						{
-							result = result.Replace(
-								string.Format("RT @{0}:", entity.ScreenName),
-								string.Format("RT: <a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a><br/>", entity.Name, entity.ScreenName)
-								);
+							var src_tag = string.Format("RT @{0}:", entity.ScreenName);
+							var dst_tag = string.Format("RT: <a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a><br/>", entity.Name, entity.ScreenName);
+
+							if (result.Contains(src_tag))
+							{
+								result = result.Replace(src_tag, dst_tag);
+							}
 						}
 						// @～
 						else
 						{
-							result = result.Replace(
-								string.Format("@{0}", entity.ScreenName),
-								string.Format("返信先: <a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a><br/>", entity.Name, entity.ScreenName)
-								);
+							var src_tag = string.Format("@{0}", entity.ScreenName);
+							var dst_tag = string.Format("返信先: <a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a><br/>", entity.Name, entity.ScreenName);
+
+							if (result.Contains(src_tag))
+							{
+								result = result.Replace(src_tag, dst_tag);
+							}
 						}
 					}
 				}
@@ -1057,7 +1073,6 @@ namespace twget
 				var origin_st = new DateTimeOffset(offseted.Year, offseted.Month, offseted.Day, 0, 0, 0, now.Offset);
 				var origin_ed = origin_st + TimeSpan.FromDays(1);
 
-				//var origin_lct = origin_st.LocalDateTime;
 				var suffix_origin = string.Format("{0:0000}{1:00}{2:00}", origin_st.Year, origin_st.Month, origin_st.Day);
 				var suffix = MakeFileNameSuffix(now.LocalDateTime, true);
 				var filename = string.Format("{0}_{1}-{2}.md", __FUNCTION__, suffix_origin, suffix);
