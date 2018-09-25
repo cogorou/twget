@@ -48,6 +48,7 @@ namespace twget
 						break;
 					}
 					
+					
 					// トレンドキーワードリスト:
 					if (commands.TryGetValue("trends", out value))
 					{
@@ -600,6 +601,109 @@ namespace twget
 
 		#endregion
 
+		#region Rate Limit 関連:
+
+		/// <summary>
+		/// Rate Limit Status 表示
+		/// </summary>
+		/// <param name="tokens">トークン</param>
+		public static void ShowRateLimitStatus(CoreTweet.Tokens tokens)
+		{
+			var rls = tokens.Application.RateLimitStatus().RateLimit;
+
+			Console.WriteLine(
+				"Limit:{0} Remaining={1} Reset={2}",
+				rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+				);
+		}
+
+		/// <summary>
+		/// Rate Limit 待機
+		/// </summary>
+		/// <param name="rls">Rate Limit</param>
+		/// <param name="offset">Limit からのオフセット [0,1~15]</param>
+		/// <param name="quiet">問い合わせが不用か否か [false:必要、true:不用]</param>
+		/// <returns>
+		///		0:何もしなかった。
+		///		1:待機した。
+		///		2:待機した。次回から尋ねない。
+		///		3:中断する。
+		/// </returns>
+		static int WaitRateLimit(CoreTweet.RateLimit rls, int offset, bool quiet)
+		{
+			int result = 0;
+
+			int lower = 0;
+			if (offset > 0)
+				lower = rls.Limit - offset;
+			if (lower < 0)
+				lower = 0;
+
+			if (rls.Remaining <= lower)
+			{
+				Console.WriteLine("Rate Limit Reached !!");
+				if (quiet)
+				{
+					result = 2;
+				}
+				else
+				{
+					#region 問い合わせ:
+					Console.WriteLine("Would you like to continue?");
+					Console.WriteLine("If you wish to continue, wait until time.");
+
+					do
+					{
+						Console.WriteLine("");
+						Console.WriteLine("Please select a number from the following.");
+						Console.WriteLine("1: Yes, I wish to continue.");
+						Console.WriteLine("2: Yes, I wish to continue on next time.");
+						Console.WriteLine("3: No, I break.");
+						Console.Write("_ ");
+						var ans = Console.ReadLine();
+						var number = Convert.ToInt32(ans);
+						if (1 <= number && number <= 3)
+						{
+							result = number;
+							break;
+						}
+					} while (true);
+					#endregion
+				}
+
+				#region 待機:
+				if (result == 1 || result == 2)
+				{
+					Console.WriteLine("");
+					Console.WriteLine("I agreed to your request. I will wait until {0}.", rls.Reset.LocalDateTime);
+
+					var diff = rls.Reset.LocalDateTime - DateTime.Now;
+					for (int i = 0; i < diff.TotalSeconds; i++)
+					{
+						System.Threading.Thread.Sleep(1000);
+
+						if (rls.Reset.LocalDateTime <= DateTime.Now) break;
+
+						if ((i + 1) % 5 == 0)
+							Console.Write(".");
+						if ((i + 1) % 60 == 0)
+							Console.WriteLine("");
+					}
+					Console.WriteLine("");
+				}
+				else
+				{
+					Console.WriteLine("");
+					Console.WriteLine("This is interrupted by your request.");
+				}
+				#endregion
+			}
+
+			return result;
+		}
+
+		#endregion
+
 		#region コマンド: (使用方法の表示)
 
 		/// <summary>
@@ -766,14 +870,27 @@ namespace twget
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
-			// Rate Limit Status
+			ShowRateLimitStatus(tokens);
+
+			bool wait_rate_limit_quiet_mode = false;
+
+			#region Rate Limit 待機:
 			{
+				// Rate Limit Status
 				var rls = tokens.Application.RateLimitStatus().RateLimit;
-				Console.WriteLine(
-					"Limit:{0} Remaining={1} Reset={2}",
-					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-					);
+
+				// Rate Limit 待機:
+				int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+				if (ans == 2)
+				{
+					wait_rate_limit_quiet_mode = true;
+				}
+				else if (ans == 3)
+				{
+					return;
+				}
 			}
+			#endregion
 
 			foreach (var location in tokens.Trends.Available())
 			{
@@ -888,19 +1005,33 @@ namespace twget
 		static void Friends(CoreTweet.Tokens tokens)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
+
+			ShowRateLimitStatus(tokens);
+
+			bool wait_rate_limit_quiet_mode = false;
+
+			#region Rate Limit 待機:
+			{
+				// Rate Limit Status
+				var rls = tokens.Application.RateLimitStatus().RateLimit;
+
+				// Rate Limit 待機:
+				int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+				if (ans == 2)
+				{
+					wait_rate_limit_quiet_mode = true;
+				}
+				else if (ans == 3)
+				{
+					return;
+				}
+			}
+			#endregion
+
 			var suffix = MakeFileNameSuffix(DateTime.Now, true);
 			var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
 			using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
 			{
-				// Rate Limit Status
-				{
-					var rls = tokens.Application.RateLimitStatus().RateLimit;
-					Console.WriteLine(
-						"Limit:{0} Remaining={1} Reset={2}",
-						rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-						);
-				}
-
 				stream.WriteLine(__FUNCTION__);
 				stream.WriteLine("====");
 
@@ -960,6 +1091,28 @@ namespace twget
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
+			ShowRateLimitStatus(tokens);
+
+			bool wait_rate_limit_quiet_mode = false;
+
+			#region Rate Limit 待機:
+			{
+				// Rate Limit Status
+				var rls = tokens.Application.RateLimitStatus().RateLimit;
+
+				// Rate Limit 待機:
+				int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+				if (ans == 2)
+				{
+					wait_rate_limit_quiet_mode = true;
+				}
+				else if (ans == 3)
+				{
+					return;
+				}
+			}
+			#endregion
+
 			var users = new SortedDictionary<string, CoreTweet.User>();
 			var archives = new Dictionary<long?, List<CoreTweet.Status>>();
 
@@ -994,17 +1147,6 @@ namespace twget
 				#region 収集:
 				try
 				{
-					#region Rate Limit Status
-					{
-						var rls = tokens.Application.RateLimitStatus().RateLimit;
-
-						Console.WriteLine(
-							"Limit:{0} Remaining={1} Reset={2}",
-							rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-							);
-					}
-					#endregion
-
 					long? prev_id = null;
 					while (true)
 					{
@@ -1044,13 +1186,26 @@ namespace twget
 								);
 
 							Console.WriteLine("{0} {1}", text1, text2);
+
+							// Rate Limit 待機:
+							int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+							if (ans == 2)
+							{
+								wait_rate_limit_quiet_mode = true;
+							}
+							else if (ans == 3)
+							{
+								break;
+							}
 						}
 
+						// 終了条件:
 						if (total == 0) break;
 						if (abort == true) break;
 						if (last_id == null) break;
 						if (last_id == prev_id) break;
 
+						// 継続:
 						prev_id = last_id;
 						System.Threading.Thread.Sleep(1000);
 					}
@@ -1140,18 +1295,30 @@ namespace twget
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
-			var tweet_status_list = new List<CoreTweet.Status>();
-			var now = DateTimeOffset.Now;
+			ShowRateLimitStatus(tokens);
 
-			#region Rate Limit Status
+			bool wait_rate_limit_quiet_mode = false;
+
+			#region Rate Limit 待機:
 			{
+				// Rate Limit Status
 				var rls = tokens.Application.RateLimitStatus().RateLimit;
-				Console.WriteLine(
-					"Limit:{0} Remaining={1} Reset={2}",
-					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-					);
+
+				// Rate Limit 待機:
+				int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+				if (ans == 2)
+				{
+					wait_rate_limit_quiet_mode = true;
+				}
+				else if (ans == 3)
+				{
+					return;
+				}
 			}
 			#endregion
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+			var now = DateTimeOffset.Now;
 
 			#region 収集開始日時の計算:
 			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
@@ -1298,18 +1465,30 @@ namespace twget
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
-			var tweet_status_list = new List<CoreTweet.Status>();
-			var now = DateTimeOffset.Now;
+			ShowRateLimitStatus(tokens);
 
-			#region Rate Limit Status
+			bool wait_rate_limit_quiet_mode = false;
+
+			#region Rate Limit 待機:
 			{
+				// Rate Limit Status
 				var rls = tokens.Application.RateLimitStatus().RateLimit;
-				Console.WriteLine(
-					"Limit:{0} Remaining={1} Reset={2}",
-					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-					);
+
+				// Rate Limit 待機:
+				int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+				if (ans == 2)
+				{
+					wait_rate_limit_quiet_mode = true;
+				}
+				else if (ans == 3)
+				{
+					return;
+				}
 			}
 			#endregion
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+			var now = DateTimeOffset.Now;
 
 			#region 収集開始日時の計算:
 			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
@@ -1505,18 +1684,30 @@ namespace twget
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
-			var tweet_status_list = new List<CoreTweet.Status>();
-			var now = DateTimeOffset.Now;
+			ShowRateLimitStatus(tokens);
 
-			#region Rate Limit Status
+			bool wait_rate_limit_quiet_mode = false;
+
+			#region Rate Limit 待機:
 			{
+				// Rate Limit Status
 				var rls = tokens.Application.RateLimitStatus().RateLimit;
-				Console.WriteLine(
-					"Limit:{0} Remaining={1} Reset={2}",
-					rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-					);
+
+				// Rate Limit 待機:
+				int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+				if (ans == 2)
+				{
+					wait_rate_limit_quiet_mode = true;
+				}
+				else if (ans == 3)
+				{
+					return;
+				}
 			}
 			#endregion
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+			var now = DateTimeOffset.Now;
 
 			#region 収集開始日時の計算:
 			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
