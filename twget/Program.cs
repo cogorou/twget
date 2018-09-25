@@ -1141,7 +1141,7 @@ namespace twget
 				var tweet_status_list = new List<CoreTweet.Status>();
 				archives[user.Value.Id] = tweet_status_list;
 
-				Console.WriteLine("User: {0} ({1})", user.Value.ScreenName, user.Value.Name);
+				Console.WriteLine("User: {0} @{1} ({2})", user.Value.Name, user.Value.ScreenName, user.Value.Id);
 
 				#region 収集:
 				try
@@ -1238,13 +1238,11 @@ namespace twget
 					#region 出力:
 					foreach (var user in users)
 					{
-						var user_id = user.Value.Id;
-						var articles = archives[user_id];
-
 						stream.WriteLine("--------------------------------------------------");
-						stream.WriteLine("# {0} @{1} ({2})", user.Value.Name, user.Value.ScreenName, user_id);
+						stream.WriteLine("# {0} @{1} ({2})", user.Value.Name, user.Value.ScreenName, user.Value.Id);
 						stream.WriteLine("");
 
+						var articles = archives[user.Value.Id];
 						var items = articles.FindAll((item) => { return (origin_st <= item.CreatedAt && item.CreatedAt < origin_ed); });
 						foreach (var item in items)
 						{
