@@ -48,7 +48,6 @@ namespace twget
 						break;
 					}
 					
-					
 					// トレンドキーワードリスト:
 					if (commands.TryGetValue("trends", out value))
 					{
@@ -1555,6 +1554,17 @@ namespace twget
 							);
 
 						Console.WriteLine("{0} {1}", text1, text2);
+
+						// Rate Limit 待機:
+						int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+						if (ans == 2)
+						{
+							wait_rate_limit_quiet_mode = true;
+						}
+						else if (ans == 3)
+						{
+							break;
+						}
 					}
 
 					if (total == 0) break;
@@ -1774,6 +1784,17 @@ namespace twget
 							);
 
 						Console.WriteLine("{0} {1}", text1, text2);
+
+						// Rate Limit 待機:
+						int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+						if (ans == 2)
+						{
+							wait_rate_limit_quiet_mode = true;
+						}
+						else if (ans == 3)
+						{
+							break;
+						}
 					}
 
 					if (total == 0) break;
