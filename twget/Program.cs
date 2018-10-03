@@ -1128,20 +1128,14 @@ namespace twget
 			Console.WriteLine("origin : {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 			#endregion
 
-			#region ユーザーリストの生成:
+			#region 収集:
 			foreach (var user in tokens.Friends.List())
 			{
 				users[user.ScreenName] = user;
-			}
-			#endregion
-
-			#region 収集:
-			foreach (var user in users)
-			{
 				var tweet_status_list = new List<CoreTweet.Status>();
-				archives[user.Value.Id] = tweet_status_list;
+				archives[user.Id] = tweet_status_list;
 
-				Console.WriteLine("User: {0} @{1} ({2})", user.Value.Name, user.Value.ScreenName, user.Value.Id);
+				Console.WriteLine("User: {0} @{1} ({2})", user.Name, user.ScreenName, user.Id);
 
 				#region 収集:
 				try
@@ -1150,7 +1144,7 @@ namespace twget
 					while (true)
 					{
 						// Get
-						var result = tokens.Statuses.UserTimeline(screen_name: user.Value.ScreenName, count: 200, max_id: prev_id);
+						var result = tokens.Statuses.UserTimeline(screen_name: user.ScreenName, count: 200, max_id: prev_id);
 						long? last_id = null;
 						int total = 0;
 						bool abort = false;
