@@ -47,15 +47,17 @@ namespace twget
 						Version();
 						break;
 					}
-					
+
 					// トレンドキーワードリスト:
 					if (commands.TryGetValue("trends", out value))
 					{
+						var woeId = (string.IsNullOrWhiteSpace(value)) ? 0 : Convert.ToInt64(value);
+
 						var tokens = GetTokens();
-						Trends(tokens);
+						Trends(tokens, woeId);
 						break;
 					}
-					
+
 					// フォロー中のユーザーリスト:
 					if (commands.TryGetValue("friends", out value))
 					{
@@ -722,7 +724,15 @@ namespace twget
 				"   /v ... show version.",
 				"",
 				"Trends list",
-				"   twget.exe /trends",
+				"   twget.exe /trends:[id]",
+				"   params)",
+				"   - id = prefecture id",
+				"   ex) japan",
+				"   > twget.exe /trends",
+				"   ex) tokyo",
+				"   > twget.exe /trends:1118370",
+				"   ex) yokohama",
+				"   > twget.exe /trends:1118550",
 				"",
 				"Friends list",
 				"   twget.exe /friends",
@@ -865,7 +875,8 @@ namespace twget
 		/// トレンド
 		/// </summary>
 		/// <param name="tokens">トークン</param>
-		static void Trends(CoreTweet.Tokens tokens)
+		/// <param name="woeId">地域識別コード [0:全国、etc:都道府県]</param>
+		static void Trends(CoreTweet.Tokens tokens, long woeId)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
@@ -926,10 +937,15 @@ namespace twget
 					// Kyoto		15015372
 					// Okayama		90036018
 
-					var is_japan = (location.ParentId == 1 && location.WoeId == 23424856);
-					//var is_yokohama = (location.ParentId == 23424856 && location.WoeId == 1118550);
+					var is_match = false;
+					const long japanId = 23424856;
 
-					if (is_japan)
+					if (woeId == 0)
+						is_match = (location.ParentId == 1 && location.WoeId == japanId);
+					else
+						is_match = (location.ParentId == japanId && location.WoeId == woeId);
+
+					if (is_match)
 					{
 						// 収集:
 						var trends = new List<CoreTweet.Trend>();
@@ -944,7 +960,7 @@ namespace twget
 						// 出力:
 						var now = DateTime.Now;
 						var suffix = MakeFileNameSuffix(now, true);
-						var filename = string.Format("{0}-{1}.md", __FUNCTION__, suffix);
+						var filename = string.Format("{0}-{1}{2}.md", __FUNCTION__, suffix, (woeId == 0) ? "" : string.Format("-{0}", woeId));
 						using (var stream = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
 						{
 							stream.WriteLine(__FUNCTION__);
@@ -970,17 +986,17 @@ namespace twget
 
 							// 並び替え:
 							trends.Sort((ope1, ope2) =>
+							{
+								if (ope1.TweetVolume == null && ope2.TweetVolume == null)
 								{
-									if (ope1.TweetVolume == null && ope2.TweetVolume == null)
-									{
-										return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
-									}
-									if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
-									if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
-									int ope1_val = (int)ope1.TweetVolume;
-									int ope2_val = (int)ope2.TweetVolume;
-									return ope1_val.CompareTo(ope2_val);
-								});
+									return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
+								}
+								if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
+								if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
+								int ope1_val = (int)ope1.TweetVolume;
+								int ope2_val = (int)ope2.TweetVolume;
+								return ope1_val.CompareTo(ope2_val);
+							});
 							// リスト化:
 							foreach (var trend in trends)
 							{
