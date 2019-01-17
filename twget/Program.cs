@@ -47,7 +47,7 @@ namespace twget
 						Version();
 						break;
 					}
-
+					
 					// トレンドキーワードリスト:
 					if (commands.TryGetValue("trends", out value))
 					{
@@ -57,7 +57,7 @@ namespace twget
 						Trends(tokens, woeId);
 						break;
 					}
-
+					
 					// フォロー中のユーザーリスト:
 					if (commands.TryGetValue("friends", out value))
 					{
@@ -418,10 +418,11 @@ namespace twget
 		/// Photo
 		/// </summary>
 		/// <param name="stream">出力先のストリーム</param>
-		/// <param name="entities">エンティティ</param>
-		static void WritePhoto(this System.IO.StreamWriter stream, CoreTweet.Entities entities)
+		/// <param name="status">ステータス</param>
+		static void WritePhoto(this System.IO.StreamWriter stream, CoreTweet.Status status)
 		{
 			const int image_max_size = 480;
+			var entities = status.ExtendedEntities;
 
 			if (entities != null)
 			{
@@ -445,7 +446,7 @@ namespace twget
 							int height = (int)System.Math.Round(entity.Sizes.Small.Height / mag);
 
 							stream.WriteLine(
-								"<a href=\"{0}\" target=_blank><img src=\"{0}\" width={1} height={2}></a>",
+								"<a href=\"{0}\" target=_blank><img src=\"{0}\" width={1} height={2}></a><br/><br/>",
 								media_url, width, height
 								);
 						}
@@ -458,62 +459,67 @@ namespace twget
 		/// Entities
 		/// </summary>
 		/// <param name="stream">出力先のストリーム</param>
-		/// <param name="entities">エンティティ</param>
-		static void WriteEntities(this System.IO.StreamWriter stream, CoreTweet.Entities entities)
+		/// <param name="status">ステータス</param>
+		static void WriteEntities(this System.IO.StreamWriter stream, CoreTweet.Status status)
 		{
-			if (entities != null)
+			if (status.Entities != null)
 			{
-				if (entities.Urls != null)
+				if (status.Entities.Urls != null)
 				{
 					stream.WriteLine("- Urls:");
-					foreach (var entity in entities.Urls)
+					foreach (var entity in status.Entities.Urls)
 					{
 						stream.WriteLine("	- Url        : <a href=\"{0}\" target=_blank>{0}</a>", entity.Url);
 						stream.WriteLine("	- ExpandedUrl: <a href=\"{0}\" target=_blank>{0}</a>", entity.ExpandedUrl);
 						stream.WriteLine("	- DisplayUrl : {0}", entity.DisplayUrl);
 					}
 				}
-				if (entities.Media != null)
+				if (status.ExtendedEntities != null)
 				{
-					stream.WriteLine("- Media:");
-					foreach (var entity in entities.Media)
+					if (status.ExtendedEntities.Media != null)
 					{
-						stream.WriteLine("	- Id: {0}", entity.Id);
-						stream.WriteLine("	- Type       : {0}", entity.Type);
-						stream.WriteLine("	- Url        : <a href=\"{0}\" target=_blank>{0}</a>", entity.Url);
-						stream.WriteLine("	- ExpandedUrl: <a href=\"{0}\" target=_blank>{0}</a>", entity.ExpandedUrl);
-						stream.WriteLine("	- DisplayUrl : {0}", entity.DisplayUrl);
-						stream.WriteLine("	- ExtAltText : {0}", entity.ExtAltText);
-						stream.WriteLine("	- MediaUrl     : <a href=\"{0}\" target=_blank>{0}</a>", entity.MediaUrl);
-						stream.WriteLine("	- MediaUrlHttps: <a href=\"{0}\" target=_blank>{0}</a>", entity.MediaUrlHttps);
-						stream.WriteLine("	- Sizes:");
-						stream.WriteLine("		- L: {0},{1}", entity.Sizes.Large.Width, entity.Sizes.Large.Height);
-						stream.WriteLine("		- M: {0},{1}", entity.Sizes.Medium.Width, entity.Sizes.Medium.Height);
-						stream.WriteLine("		- S: {0},{1}", entity.Sizes.Small.Width, entity.Sizes.Small.Height);
-						stream.WriteLine("		- T: {0},{1}", entity.Sizes.Thumb.Width, entity.Sizes.Thumb.Height);
-						stream.WriteLine("");
+						stream.WriteLine("- Media:");
+						foreach (var entity in status.ExtendedEntities.Media)
+						{
+							stream.WriteLine("	- Id: {0}", entity.Id);
+							{
+								stream.WriteLine("		- Type       : {0}", entity.Type);
+								stream.WriteLine("		- Url        : <a href=\"{0}\" target=_blank>{0}</a>", entity.Url);
+								stream.WriteLine("		- ExpandedUrl: <a href=\"{0}\" target=_blank>{0}</a>", entity.ExpandedUrl);
+								stream.WriteLine("		- DisplayUrl : {0}", entity.DisplayUrl);
+								stream.WriteLine("		- ExtAltText : {0}", entity.ExtAltText);
+								stream.WriteLine("		- MediaUrl     : <a href=\"{0}\" target=_blank>{0}</a>", entity.MediaUrl);
+								stream.WriteLine("		- MediaUrlHttps: <a href=\"{0}\" target=_blank>{0}</a>", entity.MediaUrlHttps);
+								stream.WriteLine("		- Sizes:");
+								stream.WriteLine("			- L: {0},{1}", entity.Sizes.Large.Width, entity.Sizes.Large.Height);
+								stream.WriteLine("			- M: {0},{1}", entity.Sizes.Medium.Width, entity.Sizes.Medium.Height);
+								stream.WriteLine("			- S: {0},{1}", entity.Sizes.Small.Width, entity.Sizes.Small.Height);
+								stream.WriteLine("			- T: {0},{1}", entity.Sizes.Thumb.Width, entity.Sizes.Thumb.Height);
+							}
+							stream.WriteLine("");
+						}
 					}
 				}
-				if (entities.HashTags != null)
+				if (status.Entities.HashTags != null)
 				{
 					stream.WriteLine("- HashTags:");
-					foreach (var entity in entities.HashTags)
+					foreach (var entity in status.Entities.HashTags)
 					{
 						stream.WriteLine("	- Text: {0}", entity.Text);
 					}
 				}
-				if (entities.Symbols != null)
+				if (status.Entities.Symbols != null)
 				{
 					stream.WriteLine("- Symbols:");
-					foreach (var entity in entities.Symbols)
+					foreach (var entity in status.Entities.Symbols)
 					{
 						stream.WriteLine("	- {0}", entity.Text);
 					}
 				}
-				if (entities.UserMentions != null)
+				if (status.Entities.UserMentions != null)
 				{
 					stream.WriteLine("- UserMentions:");
-					foreach (var entity in entities.UserMentions)
+					foreach (var entity in status.Entities.UserMentions)
 					{
 						stream.WriteLine("	- Name: {0} @{1}", entity.Name, entity.ScreenName);
 					}
@@ -761,8 +767,8 @@ namespace twget
 				"   - offset_days = 0~",
 				"   - screen_name = user screen name",
 				"   ex)",
-				"   > twget.exe /user maruko",
-				"   > twget.exe /user:7 taro",
+				"   > twget.exe /user himiko",
+				"   > twget.exe /user:7 stain",
 				"",
 				"Search",
 				"   twget.exe /search:[offset_days] <keywords>",
@@ -986,17 +992,17 @@ namespace twget
 
 							// 並び替え:
 							trends.Sort((ope1, ope2) =>
-							{
-								if (ope1.TweetVolume == null && ope2.TweetVolume == null)
 								{
-									return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
-								}
-								if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
-								if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
-								int ope1_val = (int)ope1.TweetVolume;
-								int ope2_val = (int)ope2.TweetVolume;
-								return ope1_val.CompareTo(ope2_val);
-							});
+									if (ope1.TweetVolume == null && ope2.TweetVolume == null)
+									{
+										return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
+									}
+									if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
+									if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
+									int ope1_val = (int)ope1.TweetVolume;
+									int ope2_val = (int)ope2.TweetVolume;
+									return ope1_val.CompareTo(ope2_val);
+								});
 							// リスト化:
 							foreach (var trend in trends)
 							{
@@ -1271,14 +1277,14 @@ namespace twget
 							stream.WriteLine("</tr>");
 							stream.WriteLine("</table>");
 							stream.WriteLine("");
-							stream.WritePhoto(item.Entities);
+							stream.WritePhoto(item);
 							stream.WriteLine("");
 							stream.WriteLine("User: {0}  ", string.Format("<a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a>", item.User.Name, item.User.ScreenName));
 							stream.WriteLine("Id: {0}  ", item.Id);
 							stream.WriteLine("Retweet :{0} {1}  ", item.RetweetCount, ((item.IsRetweeted == true) ? "*" : ""));
 							stream.WriteLine("Favorite:{0} {1}  ", item.FavoriteCount, ((item.IsFavorited == true) ? "*" : ""));
 							stream.WriteLine("");
-							stream.WriteEntities(item.Entities);
+							stream.WriteEntities(item);
 							stream.WriteLine("");
 						}
 						stream.WriteLine("");
@@ -1444,14 +1450,14 @@ namespace twget
 					stream.WriteLine("</tr>");
 					stream.WriteLine("</table>");
 					stream.WriteLine("");
-					stream.WritePhoto(item.Entities);
+					stream.WritePhoto(item);
 					stream.WriteLine("");
 					stream.WriteLine("User: {0}  ", string.Format("<a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a>", item.User.Name, item.User.ScreenName));
 					stream.WriteLine("Id: {0}  ", item.Id);
 					stream.WriteLine("Retweet :{0} {1}  ", item.RetweetCount, ((item.IsRetweeted == true) ? "*" : ""));
 					stream.WriteLine("Favorite:{0} {1}  ", item.FavoriteCount, ((item.IsFavorited == true) ? "*" : ""));
 					stream.WriteLine("");
-					stream.WriteEntities(item.Entities);
+					stream.WriteEntities(item);
 					stream.WriteLine("");
 				}
 			}
@@ -1674,14 +1680,14 @@ namespace twget
 					stream.WriteLine("</tr>");
 					stream.WriteLine("</table>");
 					stream.WriteLine("");
-					stream.WritePhoto(item.Entities);
+					stream.WritePhoto(item);
 					stream.WriteLine("");
 					stream.WriteLine("User: {0}  ", string.Format("<a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a>", item.User.Name, item.User.ScreenName));
 					stream.WriteLine("Id: {0}  ", item.Id);
 					stream.WriteLine("Retweet :{0} {1}  ", item.RetweetCount, ((item.IsRetweeted == true) ? "*" : ""));
 					stream.WriteLine("Favorite:{0} {1}  ", item.FavoriteCount, ((item.IsFavorited == true) ? "*" : ""));
 					stream.WriteLine("");
-					stream.WriteEntities(item.Entities);
+					stream.WriteEntities(item);
 					stream.WriteLine("");
 				}
 			}
@@ -1858,14 +1864,14 @@ namespace twget
 					stream.WriteLine("</tr>");
 					stream.WriteLine("</table>");
 					stream.WriteLine("");
-					stream.WritePhoto(item.Entities);
+					stream.WritePhoto(item);
 					stream.WriteLine("");
 					stream.WriteLine("User: {0}  ", string.Format("<a href=\"https://twitter.com/{1}\" target=_blank>{0} @{1}</a>", item.User.Name, item.User.ScreenName));
 					stream.WriteLine("Id: {0}  ", item.Id);
 					stream.WriteLine("Retweet :{0} {1}  ", item.RetweetCount, ((item.IsRetweeted == true) ? "*" : ""));
 					stream.WriteLine("Favorite:{0} {1}  ", item.FavoriteCount, ((item.IsFavorited == true) ? "*" : ""));
 					stream.WriteLine("");
-					stream.WriteEntities(item.Entities);
+					stream.WriteEntities(item);
 					stream.WriteLine("");
 				}
 			}
