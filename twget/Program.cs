@@ -47,7 +47,7 @@ namespace twget
 						Version();
 						break;
 					}
-					
+
 					// トレンドキーワードリスト:
 					if (commands.TryGetValue("trends", out value))
 					{
@@ -57,7 +57,7 @@ namespace twget
 						Trends(tokens, woeId);
 						break;
 					}
-					
+
 					// フォロー中のユーザーリスト:
 					if (commands.TryGetValue("friends", out value))
 					{
@@ -71,8 +71,10 @@ namespace twget
 					{
 						var offset_days = (string.IsNullOrWhiteSpace(value)) ? 0 : Convert.ToInt32(value);
 
+						var screen_names = ExtractScreenNames(Parameters);
+
 						var tokens = GetTokens();
-						Today(tokens, offset_days);
+						Today(tokens, offset_days, screen_names);
 						break;
 					}
 
@@ -140,6 +142,11 @@ namespace twget
 				Console.WriteLine(ex.StackTrace);
 			}
 		}
+
+		/// <summary>
+		/// 問い合わせを省略するか否か
+		/// </summary>
+		static bool wait_rate_limit_quiet_mode = false;
 
 		#region 引数解析:
 
@@ -744,12 +751,13 @@ namespace twget
 				"   twget.exe /friends",
 				"",
 				"Today Timeline",
-				"   twget.exe /today:[offset_days]",
+				"   twget.exe /today:[offset_days] [screen name list]",
 				"   params)",
 				"   - offset_days = 0~",
 				"   ex)",
 				"   > twget.exe /today",
-				"   > twget.exe /today:7",
+				"   > twget.exe /today:1",
+				"   > twget.exe /today:1 screen_names.txt",
 				"",
 				"Home Timeline",
 				"   twget.exe /home:[offset_days]",
@@ -768,7 +776,7 @@ namespace twget
 				"   - screen_name = user screen name",
 				"   ex)",
 				"   > twget.exe /user himiko",
-				"   > twget.exe /user:7 stain",
+				"   > twget.exe /user:365 stain",
 				"",
 				"Search",
 				"   twget.exe /search:[offset_days] <keywords>",
@@ -888,8 +896,6 @@ namespace twget
 
 			ShowRateLimitStatus(tokens);
 
-			bool wait_rate_limit_quiet_mode = false;
-
 			#region Rate Limit 待機:
 			{
 				// Rate Limit Status
@@ -992,17 +998,17 @@ namespace twget
 
 							// 並び替え:
 							trends.Sort((ope1, ope2) =>
+							{
+								if (ope1.TweetVolume == null && ope2.TweetVolume == null)
 								{
-									if (ope1.TweetVolume == null && ope2.TweetVolume == null)
-									{
-										return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
-									}
-									if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
-									if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
-									int ope1_val = (int)ope1.TweetVolume;
-									int ope2_val = (int)ope2.TweetVolume;
-									return ope1_val.CompareTo(ope2_val);
-								});
+									return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
+								}
+								if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
+								if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
+								int ope1_val = (int)ope1.TweetVolume;
+								int ope2_val = (int)ope2.TweetVolume;
+								return ope1_val.CompareTo(ope2_val);
+							});
 							// リスト化:
 							foreach (var trend in trends)
 							{
@@ -1028,8 +1034,6 @@ namespace twget
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
 			ShowRateLimitStatus(tokens);
-
-			bool wait_rate_limit_quiet_mode = false;
 
 			#region Rate Limit 待機:
 			{
@@ -1108,13 +1112,12 @@ namespace twget
 		/// </summary>
 		/// <param name="tokens">トークン</param>
 		/// <param name="offset_days">本日から遡る日数 [0~]</param>
-		static void Today(CoreTweet.Tokens tokens, int offset_days)
+		/// <param name="screen_names">スクリーン名のコレクション (省略時は null を指定してください。その場合は Friends を参照します。)</param>
+		static void Today(CoreTweet.Tokens tokens, int offset_days, IEnumerable<string> screen_names)
 		{
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
 			ShowRateLimitStatus(tokens);
-
-			bool wait_rate_limit_quiet_mode = false;
 
 			#region Rate Limit 待機:
 			{
@@ -1151,88 +1154,41 @@ namespace twget
 			#endregion
 
 			#region 収集:
-			foreach (var user in tokens.Friends.List())
+			if (screen_names == null || screen_names.Count() <= 0)
 			{
-				users[user.ScreenName] = user;
-				var tweet_status_list = new List<CoreTweet.Status>();
-				archives[user.Id] = tweet_status_list;
-
-				Console.WriteLine("User: {0} @{1} ({2})", user.Name, user.ScreenName, user.Id);
-
-				#region 収集:
-				try
+				foreach (var item in tokens.Friends.List())
 				{
-					long? prev_id = null;
-					while (true)
+					Console.WriteLine("User: {0} @{1} ({2})", item.Name, item.ScreenName, item.Id);
+
+					var tweet_status_list = CorectUserTimeline(tokens, item.ScreenName, origin);
+					if (tweet_status_list.Count > 0)
 					{
-						// Get
-						var result = tokens.Statuses.UserTimeline(screen_name: user.ScreenName, count: 200, max_id: prev_id);
-						long? last_id = null;
-						int total = 0;
-						bool abort = false;
-						if (result != null)
-						{
-							total = result.Count;
-							foreach (var item in result)
-							{
-								if (item.CreatedAt < origin)
-								{
-									abort = true;
-									break;
-								}
+						var user = tweet_status_list[0].User;
 
-								tweet_status_list.Add(item);
-								last_id = item.Id;
-							}
-						}
-						// Result
-						{
-							// Rate Limit Status
-							var rls = tokens.Application.RateLimitStatus().RateLimit;
-							var text1 = string.Format(
-									"Limit:{0} Remaining={1} Reset={2}",
-									rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-								);
-
-							// count
-							var text2 = string.Format(
-								"items={0} last_id:{1} prev_id:{2}",
-								tweet_status_list.Count, last_id, prev_id
-								);
-
-							Console.WriteLine("{0} {1}", text1, text2);
-
-							// Rate Limit 待機:
-							int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
-							if (ans == 2)
-							{
-								wait_rate_limit_quiet_mode = true;
-							}
-							else if (ans == 3)
-							{
-								break;
-							}
-						}
-
-						// 終了条件:
-						if (total == 0) break;
-						if (abort == true) break;
-						if (last_id == null) break;
-						if (last_id == prev_id) break;
-
-						// 継続:
-						prev_id = last_id;
-						System.Threading.Thread.Sleep(1000);
+						users[user.ScreenName] = user;
+						archives[user.Id] = tweet_status_list;
 					}
 				}
-				catch (System.Exception ex)
+			}
+			else
+			{
+				foreach (var screen_name in screen_names)
 				{
-					Console.WriteLine(__FUNCTION__);
-					Console.WriteLine(ex.Message);
-					Console.WriteLine(ex.StackTrace);
-					break;
+					Console.WriteLine("User: @{0}", screen_name);
+
+					CoreTweet.User prev = null;
+					if (users.TryGetValue(screen_name, out prev))
+						continue;
+
+					var tweet_status_list = CorectUserTimeline(tokens, screen_name, origin);
+					if (tweet_status_list.Count > 0)
+					{
+						var user = tweet_status_list[0].User;
+
+						users[user.ScreenName] = user;
+						archives[user.Id] = tweet_status_list;
+					}
 				}
-				#endregion
 			}
 			#endregion
 
@@ -1309,8 +1265,6 @@ namespace twget
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
 			ShowRateLimitStatus(tokens);
-
-			bool wait_rate_limit_quiet_mode = false;
 
 			#region Rate Limit 待機:
 			{
@@ -1480,8 +1434,6 @@ namespace twget
 
 			ShowRateLimitStatus(tokens);
 
-			bool wait_rate_limit_quiet_mode = false;
-
 			#region Rate Limit 待機:
 			{
 				// Rate Limit Status
@@ -1500,10 +1452,8 @@ namespace twget
 			}
 			#endregion
 
-			var tweet_status_list = new List<CoreTweet.Status>();
-			var now = DateTimeOffset.Now;
-
 			#region 収集開始日時の計算:
+			var now = DateTimeOffset.Now;
 			var origin = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
 			if (offset_days > 0)
 			{
@@ -1514,89 +1464,8 @@ namespace twget
 			Console.WriteLine("origin : {0} ({1}) ({2} days)", origin.ToString("yyyy/MM/dd HH:mm:ss"), origin.Offset, offset_days);
 			#endregion
 
-			#region 収集:
-			try
-			{
-				#region Rate Limit Status
-				{
-					var rls = tokens.Application.RateLimitStatus().RateLimit;
-
-					Console.WriteLine(
-						"Limit:{0} Remaining={1} Reset={2}",
-						rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-						);
-				}
-				#endregion
-
-				long? prev_id = null;
-				while (true)
-				{
-					// 取得:
-					var result = tokens.Statuses.UserTimeline(screen_name: name, count: 200, max_id: prev_id);
-
-					long? last_id = null;
-					int total = 0;
-					bool abort = false;
-					if (result != null)
-					{
-						total = result.Count;
-						foreach (var item in result)
-						{
-							if (item.CreatedAt < origin)
-							{
-								abort = true;
-								break;
-							}
-
-							tweet_status_list.Add(item);
-							last_id = item.Id;
-						}
-					}
-					// Result
-					{
-						// Rate Limit Status
-						var rls = tokens.Application.RateLimitStatus().RateLimit;
-						var text1 = string.Format(
-								"Limit:{0} Remaining={1} Reset={2}",
-								rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
-							);
-
-						// count
-						var text2 = string.Format(
-							"items={0} last_id:{1} prev_id:{2}",
-							tweet_status_list.Count, last_id, prev_id
-							);
-
-						Console.WriteLine("{0} {1}", text1, text2);
-
-						// Rate Limit 待機:
-						int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
-						if (ans == 2)
-						{
-							wait_rate_limit_quiet_mode = true;
-						}
-						else if (ans == 3)
-						{
-							break;
-						}
-					}
-
-					if (total == 0) break;
-					if (abort == true) break;
-					if (last_id == null) break;
-					if (last_id == prev_id) break;
-
-					prev_id = last_id;
-					System.Threading.Thread.Sleep(1000);
-				}
-			}
-			catch (System.Exception ex)
-			{
-				Console.WriteLine(__FUNCTION__);
-				Console.WriteLine(ex.Message);
-				Console.WriteLine(ex.StackTrace);
-			}
-			#endregion
+			// 収集:
+			var tweet_status_list = CorectUserTimeline(tokens, name, origin);
 
 			#region 出力:
 			var suffix = MakeFileNameSuffix(now.LocalDateTime, true);
@@ -1709,8 +1578,6 @@ namespace twget
 			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
 
 			ShowRateLimitStatus(tokens);
-
-			bool wait_rate_limit_quiet_mode = false;
 
 			#region Rate Limit 待機:
 			{
@@ -1876,6 +1743,165 @@ namespace twget
 				}
 			}
 			#endregion
+		}
+
+		#endregion
+
+		#region 関数: (ユーザータイムライン収集)
+
+		/// <summary>
+		/// ユーザータイムライン収集
+		/// </summary>
+		/// <param name="tokens">トークン</param>
+		/// <param name="keyword">フィルタキーワード</param>
+		/// <param name="offset_days">本日から遡る日数 [0~7]</param>
+		/// <param name="origin">収集する期間の始日</param>
+		/// <returns>
+		///		収集した結果を返します。
+		/// </returns>
+		static List<CoreTweet.Status> CorectUserTimeline(CoreTweet.Tokens tokens, string name, DateTimeOffset origin)
+		{
+			var __FUNCTION__ = MethodBase.GetCurrentMethod().Name;
+
+			var tweet_status_list = new List<CoreTweet.Status>();
+
+			#region 収集:
+			try
+			{
+				#region Rate Limit Status
+				{
+					var rls = tokens.Application.RateLimitStatus().RateLimit;
+
+					Console.WriteLine(
+						"Limit:{0} Remaining={1} Reset={2}",
+						rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+						);
+				}
+				#endregion
+
+				long? prev_id = null;
+				while (true)
+				{
+					// 取得:
+					var result = tokens.Statuses.UserTimeline(screen_name: name, count: 200, max_id: prev_id);
+
+					long? last_id = null;
+					int total = 0;
+					bool abort = false;
+					if (result != null)
+					{
+						total = result.Count;
+						foreach (var item in result)
+						{
+							if (item.CreatedAt < origin)
+							{
+								abort = true;
+								break;
+							}
+
+							tweet_status_list.Add(item);
+							last_id = item.Id;
+						}
+					}
+					// Result
+					{
+						// Rate Limit Status
+						var rls = tokens.Application.RateLimitStatus().RateLimit;
+						var text1 = string.Format(
+								"Limit:{0} Remaining={1} Reset={2}",
+								rls.Limit, rls.Remaining, rls.Reset.LocalDateTime
+							);
+
+						// count
+						var text2 = string.Format(
+							"items={0} last_id:{1} prev_id:{2}",
+							tweet_status_list.Count, last_id, prev_id
+							);
+
+						Console.WriteLine("{0} {1}", text1, text2);
+
+						// Rate Limit 待機:
+						int ans = WaitRateLimit(rls, 0, wait_rate_limit_quiet_mode);
+						if (ans == 2)
+						{
+							wait_rate_limit_quiet_mode = true;
+						}
+						else if (ans == 3)
+						{
+							break;
+						}
+					}
+
+					if (total == 0) break;
+					if (abort == true) break;
+					if (last_id == null) break;
+					if (last_id == prev_id) break;
+
+					prev_id = last_id;
+					System.Threading.Thread.Sleep(1000);
+				}
+			}
+			catch (System.Exception ex)
+			{
+				Console.WriteLine(__FUNCTION__);
+				Console.WriteLine(ex.Message);
+				Console.WriteLine(ex.StackTrace);
+			}
+			#endregion
+
+			return tweet_status_list;
+		}
+
+		/// <summary>
+		/// テキストファイルからスクリーン名を抽出します。
+		/// </summary>
+		/// <param name="filenames">テキストファイル</param>
+		/// <returns>
+		///		抽出したスクリーン名(※)を返します。<br/>
+		///		※各スクリーン名にアットマークは含まれません。
+		/// </returns>
+		static List<string> ExtractScreenNames(IEnumerable<string> filenames)
+		{
+			var screen_names = new List<string>();
+			foreach (var filename in filenames)
+			{
+				if (string.IsNullOrWhiteSpace(filename)) continue;
+				if (System.IO.File.Exists(filename))
+				{
+					using (var stream = new StreamReader(filename, System.Text.Encoding.UTF8))
+					{
+						#region アットマークが先頭に付加された名前 (例：@nt4_sp3) を探す.
+						// (?<![A-Za-z0-9._%+-]) @ [a-zA-Z0-9_]+
+						// ^(1)^^^^^^^^^^^^^^^^^   ^(2)^^^^^^^^^
+						// 
+						// 1. メールアドレスの可能性があるものは除外する.
+						// 2. スクリーン名と思われるもの.
+						var regex = new Regex(@"(?<![A-Za-z0-9._%+-])@[a-zA-Z0-9_]+");
+
+						while (true)
+						{
+							var line = stream.ReadLine();
+							if (line == null) break;
+
+							if (regex.IsMatch(line))
+							{
+								var matched = regex.Match(line);
+								while (matched.Success)
+								{
+									// 先頭の @ を除いた名称.
+									var name = matched.Value.Substring(1);
+									var found = screen_names.FindIndex(item => { return item == name; });
+									if (found < 0)
+										screen_names.Add(name);
+									matched = matched.NextMatch();
+								}
+							}
+						}
+						#endregion
+					}
+				}
+			}
+			return screen_names;
 		}
 
 		#endregion
