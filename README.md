@@ -40,7 +40,7 @@ ConsumerKey 及び ConsumerSecret の value に設定する値を編集してく
 	<?xml version="1.0" encoding="utf-8"?>
 	<configuration>
 		<startup>
-			<supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.5.2"/>
+			<supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.6"/>
 		</startup>
 		<appSettings>
 			<add key="ProjectDir" value="(MyDocuments)" />
@@ -174,8 +174,8 @@ PIN コードが表示されます。
 	   - offset_days = 0~
 	   - screen_name = user screen name
 	   ex)
-	   > twget.exe /user maruko
-	   > twget.exe /user:7 taro
+	   > twget.exe /user himiko
+	   > twget.exe /user:365 stain
 
 	Search
 	   twget.exe /search:[offset_days] <keywords>
@@ -287,13 +287,13 @@ PIN コードが表示されます。
 |書式|UserTimeline-(実行日時).md||  
 |例|UserTimeline-20171216\_081523\_094.md||  
 
-例）maruko と言うユーザーの投稿（本日の 0:00 以降）を取得します。
+例）himiko と言うユーザーの投稿（本日の 0:00 以降）を取得します。
 
-	twget /user maruko
+	twget /user himiko
 
-例）taro と言うユーザーの投稿（本日より 7 日前の 0:00 以降）を取得します。
+例）stain と言うユーザーの投稿（本日より 365 日前の 0:00 以降）を取得します。
 
-	twget /user:7 taro
+	twget /user:365 stain
 
 ## 検索
 
