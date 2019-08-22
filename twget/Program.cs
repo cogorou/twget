@@ -998,17 +998,17 @@ namespace twget
 
 							// 並び替え:
 							trends.Sort((ope1, ope2) =>
-							{
-								if (ope1.TweetVolume == null && ope2.TweetVolume == null)
 								{
-									return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
-								}
-								if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
-								if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
-								int ope1_val = (int)ope1.TweetVolume;
-								int ope2_val = (int)ope2.TweetVolume;
-								return ope1_val.CompareTo(ope2_val);
-							});
+									if (ope1.TweetVolume == null && ope2.TweetVolume == null)
+									{
+										return StringComparer.CurrentCulture.Compare(ope1.Name, ope2.Name);
+									}
+									if (ope1.TweetVolume == null && ope2.TweetVolume != null) return +1;
+									if (ope1.TweetVolume != null && ope2.TweetVolume == null) return -1;
+									int ope1_val = (int)ope1.TweetVolume;
+									int ope2_val = (int)ope2.TweetVolume;
+									return ope1_val.CompareTo(ope2_val);
+								});
 							// リスト化:
 							foreach (var trend in trends)
 							{
@@ -1799,7 +1799,12 @@ namespace twget
 								break;
 							}
 
-							tweet_status_list.Add(item);
+							// bugfix: 2019.08.22: 既に同じ ID のデータが有れば後発のデータを破棄する.
+							var found_item = tweet_status_list.Find((list_item) => { return list_item.Id == item.Id; });
+							if (found_item == null)
+							{
+								tweet_status_list.Add(item);
+							}
 							last_id = item.Id;
 						}
 					}
